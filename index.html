@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>전국 미세먼지 대시보드</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #2563eb;
+  padding: 30px;
+}
+
+/* 흰색 메인 박스 */
+.wrapper {
+  max-width: 1200px;
+  margin: auto;
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+}
+
+/* 제목 */
+h1 {
+  text-align: center;
+  font-size: 26px;
+  margin-bottom: 30px;
+}
+
+/* 2열 */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+/* 도 카드 */
+.region {
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+/* 도 이름 */
+.region-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+/* 시 한 줄 */
+.city {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+/* 이름 */
+.name {
+  font-weight: 600;
+}
+
+/* 값 */
+.value {
+  font-weight: 700;
+}
+
+/* 상태 */
+.status {
+  font-size: 12px;
+  font-weight: 700;
+  margin-left: 8px;
+}
+
+/* 상태 색 */
+.good { color: #22c55e; }
+.normal { color: #f59e0b; }
+.bad { color: #ef4444; }
+
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+  <h1>🌫️ 전국 미세먼지 실시간 대시보드</h1>
+  <div class="grid" id="app"></div>
+</div>
+
+<script>
+
+// 🔑 공공데이터 키 넣는 곳
+const serviceKey = "4744a0e9e35ba1ee6be951aaaa14122097a6896259d33dc272f1bb89b501e2b3";
+
+// 도 + 대표 도시
+const regions = {
+  "경기": ["수원","성남","부천","고양","용인"],
+  "서울": ["중구","강남","종로","마포"],
+  "충북": ["청주","충주","제천"],
+  "충남": ["천안","서산","아산"],
+  "전북": ["전주","군산","익산"],
+  "전남": ["목포","여수","순천"],
+  "경북": ["포항","구미","경주"],
+  "경남": ["창원","진주","김해"]
+};
+
+// 상태 판단
+function getStatus(v){
+  if(v <= 30) return ["좋음","good"];
+  if(v <= 80) return ["보통","normal"];
+  return ["나쁨","bad"];
+}
+
+// 🔥 API 호출 (핵심)
+async function fetchRegion(region){
+
+  const url =
+`https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty?serviceKey=${serviceKey}&returnType=json&sidoName=${region}&numOfRows=100&pageNo=1&ver=1.0`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  return data.response.body.items;
+}
+
+// 🔥 화면 생성
+async function render(){
+
+  const app = document.getElementById("app");
+
+  for(const region in regions){
+
+    const items = await fetchRegion(region);
+
+    const div = document.createElement("div");
+    div.className = "region";
+
+    div.innerHTML = `<div class="region-title">${region}</div>`;
+
+    regions[region].forEach((city, i) => {
+
+      // API 값 없으면 fallback
+      const value = items?.[i]?.pm10Value || 0;
+
+      const [status, cls] = getStatus(value);
+
+      const row = document.createElement("div");
+      row.className = "city";
+
+      row.innerHTML = `
+        <div class="name">${city}</div>
+        <div>
+          <span class="value ${cls}">${value} μg</span>
+          <span class="status ${cls}">${status}</span>
+        </div>
+      `;
+
+      div.appendChild(row);
+    });
+
+    app.appendChild(div);
+  }
+}
+
+render();
+
+</script>
+
+</body>
+</html>
